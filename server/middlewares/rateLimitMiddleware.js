@@ -9,7 +9,7 @@ async function rateLimitMiddleware(req, res, next) {
     }
 
     const subscriptionStatus = await userModel.checkUserStatus(user.id);
-    if (subscriptionStatus === "Basic") {
+    if (subscriptionStatus?.subscription === "Basic") {
       const count = await getUserResponseCount(user.id);
       if (count >= 5) {
         return res.status(429).json({

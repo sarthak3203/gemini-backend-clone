@@ -2,8 +2,12 @@ const Redis = require('ioredis');
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
-// Create Redis client that auto-connects on instantiation
-const redisClient = new Redis(redisUrl);
+// Create Redis client without connecting on import
+const redisClient = new Redis(redisUrl, {
+  lazyConnect: true,
+  maxRetriesPerRequest: 1,
+  retryStrategy: (times) => (times >= 5 ? null : Math.min(times * 200, 1000)),
+});
 
 redisClient.on('error', (err) => {
   console.error('Redis Client Error:', err);
@@ -19,7 +23,14 @@ function getMidnightTimestamp() {
   return Math.floor(midnight.getTime() / 1000);
 }
 
+async function ensureRedisConnected() {
+  if (redisClient.status === "ready") return;
+  if (redisClient.status === "connecting") return;
+  await redisClient.connect();
+}
+
 async function getUserResponseCount(userId) {
+  await ensureRedisConnected();
   const today = new Date().toISOString().split('T')[0];
   const key = `usage:${userId}:${today}`;
   const count = await redisClient.get(key);
@@ -27,6 +38,7 @@ async function getUserResponseCount(userId) {
 }
 
 async function incrementUserResponseCount(userId) {
+  await ensureRedisConnected();
   const today = new Date().toISOString().split('T')[0];
   const key = `usage:${userId}:${today}`;
 

@@ -1,6 +1,5 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
-const userModel = require("../models/userModel")
+const stripe = require("../config/stripe.js");
+const userModel = require("../models/userModel.js");
 async function handleWebhookStripe(req, res) {
   const sig = req.headers['stripe-signature'];
   let event;

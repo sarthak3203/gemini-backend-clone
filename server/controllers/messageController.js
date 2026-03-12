@@ -1,7 +1,15 @@
 const messageModel = require("../models/messageModel.js");
-const { messageQueue, connection } = require("../config/bullMQ.js");
+const { getMessageQueue, getBullConnection } = require("../config/bullMQ.js");
 const { QueueEvents } = require("bullmq");
 const { incrementUserResponseCount } = require("../utils/redisHelper.js");
+
+let queueEvents;
+function getQueueEvents() {
+  if (!queueEvents) {
+    queueEvents = new QueueEvents("gemini-messages", { connection: getBullConnection() });
+  }
+  return queueEvents;
+}
 
 async function postMessage(req, res) {
   try {
@@ -21,13 +29,14 @@ async function postMessage(req, res) {
 
     await incrementUserResponseCount(user.id);
 
+    const messageQueue = getMessageQueue();
     const job = await messageQueue.add("process-message", { chatroom_id, text });
 
-    const queueEvents = new QueueEvents("gemini-messages", { connection });
-    await queueEvents.waitUntilReady();
+    const qe = getQueueEvents();
+    await qe.waitUntilReady();
 
     try {
-      const result = await job.waitUntilFinished(queueEvents, 20000); // 20s timeout
+      const result = await job.waitUntilFinished(qe, 20000); // 20s timeout
       return res.status(200).json({
         success: true,
         message: text,

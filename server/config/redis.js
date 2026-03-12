@@ -2,8 +2,14 @@ require("dotenv").config();
 
 const Redis = require("ioredis");
 
-// Connect using the URL from .env
-const redis = new Redis(process.env.REDIS_URL);
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+
+// Avoid connecting on import (helps tests / one-off scripts)
+const redis = new Redis(redisUrl, {
+  lazyConnect: true,
+  maxRetriesPerRequest: 1,
+  retryStrategy: (times) => (times >= 5 ? null : Math.min(times * 200, 1000)),
+});
 
 // Event listeners to know status
 redis.on("connect", () => {
@@ -15,3 +21,4 @@ redis.on("error", (err) => {
 });
 
 module.exports = redis;
+ 

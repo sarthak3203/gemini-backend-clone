@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { Worker } = require("bullmq");
 const Redis = require("ioredis");
@@ -17,10 +18,15 @@ async function callGeminiAPI(userText) {
 }
 
 function startWorker() {
-  const connection = new Redis(process.env.REDIS_URL, {
-    tls: { rejectUnauthorized: false },
+  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  const connectionOptions = {
+    lazyConnect: true,
     maxRetriesPerRequest: null,
-  });
+    ...(redisUrl.startsWith("rediss://")
+      ? { tls: { rejectUnauthorized: false } }
+      : {}),
+  };
+  const connection = new Redis(redisUrl, connectionOptions);
 
   const worker = new Worker(
     "gemini-messages",
@@ -46,3 +52,7 @@ function startWorker() {
 }
 
 module.exports = { startWorker };
+
+if (require.main === module) {
+  startWorker();
+}
