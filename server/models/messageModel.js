@@ -1,17 +1,53 @@
-const pool = require("../config/db.js")
+const { pool } = require("../config/db");
 
-async function addUserMessage(chatroom_id,text){
-    const result = await pool.query(`INSERT INTO messages (chatroom_id,sender, message_text,status) VALUES ($1, $2, $3, $4) RETURNING *`,[chatroom_id,"USER",text,"pending"]);
-    return result.rows[0]
+function formatMessage(row) {
+  return row || null;
 }
 
+async function getChatroomOwnerId(chatroomId) {
+  const result = await pool.query(
+    `SELECT user_id
+     FROM chatrooms
+     WHERE id = $1`,
+    [Number(chatroomId)]
+  );
 
-async function addGeminiMessage(chatroom_id,text){
-    const result = await pool.query(`INSERT INTO messages (chatroom_id,sender, message_text,status) VALUES ($1, $2, $3, $4) RETURNING *`,[chatroom_id,"GEMINI",text,"completed"]);
-    return result.rows[0]
+  return result.rows[0]?.user_id || null;
 }
 
-module.exports={
-    addUserMessage,
-    addGeminiMessage
+async function addUserMessage(chatroom_id, text) {
+  const userId = await getChatroomOwnerId(chatroom_id);
+  if (!userId) {
+    throw new Error("Chatroom not found");
+  }
+
+  const result = await pool.query(
+    `INSERT INTO messages (chatroom_id, user_id, sender, message_text, status)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, chatroom_id, sender, message_text, status, created_at`,
+    [Number(chatroom_id), userId, "USER", text, "pending"]
+  );
+
+  return formatMessage(result.rows[0]);
 }
+
+async function addGeminiMessage(chatroom_id, text) {
+  const userId = await getChatroomOwnerId(chatroom_id);
+  if (!userId) {
+    throw new Error("Chatroom not found");
+  }
+
+  const result = await pool.query(
+    `INSERT INTO messages (chatroom_id, user_id, sender, message_text, status)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, chatroom_id, sender, message_text, status, created_at`,
+    [Number(chatroom_id), userId, "GEMINI", text, "completed"]
+  );
+
+  return formatMessage(result.rows[0]);
+}
+
+module.exports = {
+  addUserMessage,
+  addGeminiMessage,
+};
