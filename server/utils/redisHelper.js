@@ -1,21 +1,11 @@
-const Redis = require('ioredis');
+const { getRedisClient, ensureRedisReady } = require("../config/redis");
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+function getUsageKey(userId) {
+  const today = new Date().toISOString().split("T")[0];
+  return `app:usage:${userId}:${today}`;
+}
 
-// Create Redis client without connecting on import
-const redisClient = new Redis(redisUrl, {
-  lazyConnect: true,
-  maxRetriesPerRequest: 1,
-  retryStrategy: (times) => (times >= 5 ? null : Math.min(times * 200, 1000)),
-});
-
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
-});
-
-// No need to call redisClient.connect() here
-
-function getMidnightTimestamp() {
+function getTomorrowMidnightTimestamp() {
   const now = new Date();
   const midnight = new Date(now);
   midnight.setDate(now.getDate() + 1);
@@ -23,37 +13,26 @@ function getMidnightTimestamp() {
   return Math.floor(midnight.getTime() / 1000);
 }
 
-async function ensureRedisConnected() {
-  if (redisClient.status === "ready") return;
-  if (redisClient.status === "connecting") return;
-  await redisClient.connect();
-}
-
 async function getUserResponseCount(userId) {
-  await ensureRedisConnected();
-  const today = new Date().toISOString().split('T')[0];
-  const key = `usage:${userId}:${today}`;
-  const count = await redisClient.get(key);
+  const redis = await ensureRedisReady(getRedisClient());
+  const count = await redis.get(getUsageKey(userId));
   return count ? parseInt(count, 10) : 0;
 }
 
 async function incrementUserResponseCount(userId) {
-  await ensureRedisConnected();
-  const today = new Date().toISOString().split('T')[0];
-  const key = `usage:${userId}:${today}`;
+  const redis = await ensureRedisReady(getRedisClient());
+  const key = getUsageKey(userId);
 
-  let count = await redisClient.get(key);
-  if (count === null) {
-    await redisClient.set(key, 1);
-    await redisClient.expireat(key, getMidnightTimestamp());
-    count = 1;
-  } else {
-    count = await redisClient.incr(key);
+  const count = await redis.incr(key);
+  if (count === 1) {
+    await redis.expireat(key, getTomorrowMidnightTimestamp());
   }
-  return parseInt(count, 10);
+
+  return count;
 }
 
 module.exports = {
   getUserResponseCount,
   incrementUserResponseCount,
+  getUsageKey,
 };

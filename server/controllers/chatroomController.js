@@ -1,5 +1,9 @@
-const redis = require("../config/redis.js");
+const { getRedisClient, ensureRedisReady } = require("../config/redis.js");
 const chatroomModel = require("../models/chatroomModel.js")
+
+function getChatroomsCacheKey(userId) {
+    return `app:chatrooms:${userId}`;
+}
 
 async function postChatroom(req,res){
     try {
@@ -13,10 +17,11 @@ async function postChatroom(req,res){
         }
         const user_name = user.name;
         const user_id=user.id;
+        const redis = await ensureRedisReady(getRedisClient());
 
         const chatroom = await chatroomModel.createChatroom(title,user_name,user_id)
 
-        const cacheKey = `chatrooms_user_${user_id}`;
+        const cacheKey = getChatroomsCacheKey(user_id);
         await redis.del(cacheKey);
 
         return res.status(200).json({success:true, message:`Chatroom created successfully with id for user id ${user_id}`, chatroom})
@@ -34,8 +39,9 @@ async function getChatrooms(req, res) {
     }
 
     const user_id = user.id;
+    const redis = await ensureRedisReady(getRedisClient());
 
-    const cacheKey = `chatrooms_user_${user_id}`;
+    const cacheKey = getChatroomsCacheKey(user_id);
     const cachedData = await redis.get(cacheKey);
 
     if (cachedData) {

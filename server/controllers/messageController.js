@@ -1,15 +1,6 @@
 const messageModel = require("../models/messageModel.js");
-const { getMessageQueue, getBullConnection } = require("../config/bullMQ.js");
-const { QueueEvents } = require("bullmq");
+const { getMessageQueue, getQueueEvents } = require("../config/bullMQ.js");
 const { incrementUserResponseCount } = require("../utils/redisHelper.js");
-
-let queueEvents;
-function getQueueEvents() {
-  if (!queueEvents) {
-    queueEvents = new QueueEvents("gemini-messages", { connection: getBullConnection() });
-  }
-  return queueEvents;
-}
 
 async function postMessage(req, res) {
   try {

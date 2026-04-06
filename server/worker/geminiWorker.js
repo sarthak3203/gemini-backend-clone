@@ -1,7 +1,8 @@
 require("dotenv").config();
+
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { Worker } = require("bullmq");
-const Redis = require("ioredis");
+const { MESSAGE_QUEUE_NAME, createBullConnection } = require("../config/bullMQ.js");
 const messageModel = require("../models/messageModel.js");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -11,44 +12,41 @@ async function callGeminiAPI(userText) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await model.generateContent(userText);
     return result.response.text();
-  } catch (err) {
-    console.error("Gemini API Error:", err);
-    return "⚠️ Sorry, something went wrong with Gemini.";
+  } catch (error) {
+    console.error("Gemini API error:", error);
+    return "Sorry, something went wrong with Gemini.";
   }
 }
 
 function startWorker() {
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-  const connectionOptions = {
-    lazyConnect: true,
-    maxRetriesPerRequest: null,
-    ...(redisUrl.startsWith("rediss://")
-      ? { tls: { rejectUnauthorized: false } }
-      : {}),
-  };
-  const connection = new Redis(redisUrl, connectionOptions);
-
   const worker = new Worker(
-    "gemini-messages",
+    MESSAGE_QUEUE_NAME,
     async (job) => {
       const { chatroom_id, text } = job.data;
 
       const geminiReply = await callGeminiAPI(text);
-
       await messageModel.addGeminiMessage(chatroom_id, geminiReply);
 
       return { reply: geminiReply };
     },
-    { connection }
+    {
+      connection: createBullConnection(),
+    }
   );
 
-  worker.on("completed", (job) => {
-    console.log(`✅ Job ${job.id} completed`);
+  worker.on("ready", () => {
+    console.log("BullMQ worker is ready");
   });
 
-  worker.on("failed", (job, err) => {
-    console.error(`❌ Job ${job?.id} failed:`, err.message);
+  worker.on("completed", (job) => {
+    console.log(`Job ${job.id} completed`);
   });
+
+  worker.on("failed", (job, error) => {
+    console.error(`Job ${job?.id} failed:`, error.message);
+  });
+
+  return worker;
 }
 
 module.exports = { startWorker };

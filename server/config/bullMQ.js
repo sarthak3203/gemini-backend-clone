@@ -1,28 +1,42 @@
 require("dotenv").config();
 
-const { Queue } = require("bullmq");
-const Redis = require("ioredis");
+const { Queue, QueueEvents } = require("bullmq");
+const { createRedisConnection } = require("./redis");
 
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-const connectionOptions = {
-  maxRetriesPerRequest: null,
-  ...(redisUrl.startsWith("rediss://") ? { tls: { rejectUnauthorized: false } } : {}),
-};
-let connection;
+const MESSAGE_QUEUE_NAME = "gemini-messages";
+
 let messageQueue;
+let queueEvents;
 
-function getBullConnection() {
-  if (!connection) {
-    connection = new Redis(redisUrl, connectionOptions);
-  }
-  return connection;
+function createBullConnection() {
+  return createRedisConnection({
+    maxRetriesPerRequest: null,
+  });
 }
 
 function getMessageQueue() {
   if (!messageQueue) {
-    messageQueue = new Queue("gemini-messages", { connection: getBullConnection() });
+    messageQueue = new Queue(MESSAGE_QUEUE_NAME, {
+      connection: createBullConnection(),
+    });
   }
+
   return messageQueue;
 }
 
-module.exports = { getMessageQueue, getBullConnection };
+function getQueueEvents() {
+  if (!queueEvents) {
+    queueEvents = new QueueEvents(MESSAGE_QUEUE_NAME, {
+      connection: createBullConnection(),
+    });
+  }
+
+  return queueEvents;
+}
+
+module.exports = {
+  MESSAGE_QUEUE_NAME,
+  createBullConnection,
+  getMessageQueue,
+  getQueueEvents,
+};
