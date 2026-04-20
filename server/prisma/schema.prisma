@@ -8,10 +8,10 @@ datasource db {
 
 model User {
   id               Int        @id @default(autoincrement())
-  mobile           String     @unique
+  mobile           String?    @unique
   passwordHash     String?    // store hashed password if provided
   name             String?
-  email            String?    @unique
+  email            String     @unique
   subscription     String?    @default("BASIC")
   stripeCustomerId String?    // stripe customer identifier
   otp              Otp?

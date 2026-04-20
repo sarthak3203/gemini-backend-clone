@@ -3,7 +3,7 @@ require("dotenv").config();
 const { Queue, QueueEvents } = require("bullmq");
 const { createRedisConnection } = require("./redis");
 
-const MESSAGE_QUEUE_NAME = "gemini-messages";
+const MESSAGE_QUEUE_NAME = process.env.MESSAGE_QUEUE_NAME || "gemini-messages";
 
 let messageQueue;
 let queueEvents;

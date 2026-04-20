@@ -31,6 +31,18 @@ async function addUserMessage(chatroom_id, text) {
   return formatMessage(result.rows[0]);
 }
 
+async function updateMessageStatus(messageId, status) {
+  const result = await pool.query(
+    `UPDATE messages
+     SET status = $2
+     WHERE id = $1
+     RETURNING id, chatroom_id, sender, message_text, status, created_at`,
+    [Number(messageId), status]
+  );
+
+  return formatMessage(result.rows[0]);
+}
+
 async function addGeminiMessage(chatroom_id, text) {
   const userId = await getChatroomOwnerId(chatroom_id);
   if (!userId) {
@@ -50,4 +62,5 @@ async function addGeminiMessage(chatroom_id, text) {
 module.exports = {
   addUserMessage,
   addGeminiMessage,
+  updateMessageStatus,
 };

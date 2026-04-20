@@ -4,6 +4,19 @@ function formatUser(row) {
   return row || null;
 }
 
+function toPublicUser(row) {
+  if (!row) {
+    return null;
+  }
+
+  const { password_hash, ...user } = row;
+  return user;
+}
+
+function getDbClient(db = pool) {
+  return db;
+}
+
 async function findUserByMobile(mobile) {
   const result = await pool.query(
     `SELECT id, mobile, name, email, password_hash, subscription, stripe_customer_id, created_at, updated_at
@@ -15,24 +28,35 @@ async function findUserByMobile(mobile) {
   return formatUser(result.rows[0]);
 }
 
-async function createUser({ mobile, name }) {
+async function findUserByEmail(email) {
   const result = await pool.query(
-    `INSERT INTO users (mobile, name)
-     VALUES ($1, $2)
-     RETURNING id, mobile, name, email, password_hash, subscription, stripe_customer_id, created_at, updated_at`,
-    [mobile, name || null]
+    `SELECT id, mobile, name, email, password_hash, subscription, stripe_customer_id, created_at, updated_at
+     FROM users
+     WHERE LOWER(email) = LOWER($1)`,
+    [email]
   );
 
   return formatUser(result.rows[0]);
 }
 
-async function updatePassword(mobile, password_hash) {
+async function createUser({ email, name, passwordHash = null }, db = pool) {
+  const result = await getDbClient(db).query(
+    `INSERT INTO users (email, name, password_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id, mobile, name, email, password_hash, subscription, stripe_customer_id, created_at, updated_at`,
+    [email.toString().trim().toLowerCase(), name || null, passwordHash]
+  );
+
+  return formatUser(result.rows[0]);
+}
+
+async function updatePasswordByEmail(email, password_hash) {
   const result = await pool.query(
     `UPDATE users
      SET password_hash = $2, updated_at = CURRENT_TIMESTAMP
-     WHERE mobile = $1
+     WHERE LOWER(email) = LOWER($1)
      RETURNING id, mobile, name, email, password_hash, subscription, stripe_customer_id, created_at, updated_at`,
-    [mobile.toString().trim(), password_hash]
+    [email.toString().trim(), password_hash]
   );
 
   return formatUser(result.rows[0]);
@@ -84,4 +108,14 @@ async function checkUserStatus(id) {
   return result.rows[0] || null;
 }
 
-module.exports = { findUserByMobile, createUser, updatePassword, updateStripeCustomerId, updateSubscriptionStatus, findByStripeCustomerId,checkUserStatus };
+module.exports = {
+  findUserByMobile,
+  findUserByEmail,
+  createUser,
+  updatePasswordByEmail,
+  updateStripeCustomerId,
+  updateSubscriptionStatus,
+  findByStripeCustomerId,
+  checkUserStatus,
+  toPublicUser,
+};

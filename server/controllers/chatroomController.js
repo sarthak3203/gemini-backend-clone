@@ -69,13 +69,19 @@ async function getChatrooms(req, res) {
 async function getChatroomById(req, res) {
   try {
     const id = req.params.id;
+    const user = req.user;
+
     if (!id) {
       return res.status(404).json({ success: false, message: "Chatroom ID not found" });
     }
 
-    const chatroom = await chatroomModel.findChatroomById(id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const chatroom = await chatroomModel.findChatroomByIdForUser(id, user.id);
     if (!chatroom) {
-      return res.status(404).json({ success: false, message: "Chatroom not found or invalid chatroom ID" });
+      return res.status(404).json({ success: false, message: "Chatroom not found" });
     }
 
     const messages = await chatroomModel.findMessagesByChatroomId(id);

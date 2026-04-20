@@ -1,5 +1,6 @@
 const userModel = require("../models/userModel.js");
 const { getUserResponseCount } = require("../utils/redisHelper.js");
+const FREE_DAILY_LIMIT = 20;
 
 async function rateLimitMiddleware(req, res, next) {
   try {
@@ -11,10 +12,10 @@ async function rateLimitMiddleware(req, res, next) {
     const subscriptionStatus = await userModel.checkUserStatus(user.id);
     if (subscriptionStatus?.subscription === "BASIC") {
       const count = await getUserResponseCount(user.id);
-      if (count >= 5) {
+      if (count >= FREE_DAILY_LIMIT) {
         return res.status(429).json({
           success: false,
-          message: "Daily limit of 5 responses reached for BASIC users. Please try again tomorrow or upgrade your subscription."
+          message: `Daily limit of ${FREE_DAILY_LIMIT} responses reached for BASIC users. Please try again tomorrow.`
         });
       }
     }

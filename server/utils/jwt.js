@@ -5,7 +5,7 @@ function createTokenForTheUser(user) {
   const payload = {
     id: user.id,
     name: user.name,
-    mobile: user.mobile,
+    email: user.email,
     subscription: user.subscription,
   };
   const token = jwt.sign(payload, secret, { expiresIn: "1d" });

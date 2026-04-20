@@ -1,6 +1,7 @@
 const messageModel = require("../models/messageModel.js");
 const { getMessageQueue, getQueueEvents } = require("../config/bullMQ.js");
 const { incrementUserResponseCount } = require("../utils/redisHelper.js");
+const chatroomModel = require("../models/chatroomModel.js");
 
 async function postMessage(req, res) {
   try {
@@ -16,12 +17,21 @@ async function postMessage(req, res) {
       return res.status(400).json({ success: false, message: "Message text required" });
     }
 
-    await messageModel.addUserMessage(chatroom_id, text);
+    const chatroom = await chatroomModel.findChatroomByIdForUser(chatroom_id, user.id);
+    if (!chatroom) {
+      return res.status(404).json({ success: false, message: "Chatroom not found" });
+    }
+
+    const userMessage = await messageModel.addUserMessage(chatroom_id, text);
 
     await incrementUserResponseCount(user.id);
 
     const messageQueue = getMessageQueue();
-    const job = await messageQueue.add("process-message", { chatroom_id, text });
+    const job = await messageQueue.add("process-message", {
+      chatroom_id,
+      text,
+      user_message_id: userMessage.id,
+    });
 
     const qe = getQueueEvents();
     await qe.waitUntilReady();
@@ -34,6 +44,14 @@ async function postMessage(req, res) {
         gemini_reply: result.reply,
       });
     } catch (err) {
+      if (err?.message && !err.message.toLowerCase().includes("timed out")) {
+        return res.status(503).json({
+          success: false,
+          message: "Gemini is currently unavailable. Please try again later.",
+          error: err.message,
+        });
+      }
+
       return res.status(202).json({
         success: true,
         message: text,

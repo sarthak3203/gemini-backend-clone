@@ -4,19 +4,21 @@ import { Card } from "../../components/ui/Card";
 
 export function SuccessPage() {
   return (
-    <div className="min-h-screen bg-[rgb(var(--surface))]">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-6 py-12">
-        <Card className="w-full max-w-md p-6">
-          <div className="text-sm font-medium text-[rgb(var(--text-muted))]">Payment</div>
-          <div className="mt-1 text-xl font-semibold tracking-tight">Success</div>
-          <div className="mt-2 text-sm text-[rgb(var(--text-muted))]">
-            Your subscription should update shortly. If it doesn’t, refresh the Billing page.
+    <div className="min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl items-center justify-center">
+        <Card className="w-full max-w-lg p-6 sm:p-8">
+          <div className="inline-flex rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
+            Payment success
           </div>
-          <div className="mt-5 flex gap-2">
-            <Link to="/billing" className="w-full">
+          <h1 className="mt-4 text-3xl font-bold tracking-tight">You are all set</h1>
+          <p className="mt-2 text-sm text-[rgb(var(--text-muted))]">
+            Your subscription should update shortly. If needed, refresh status in Billing.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link to="/billing" className="flex-1">
               <Button className="w-full">Go to Billing</Button>
             </Link>
-            <Link to="/app" className="w-full">
+            <Link to="/app" className="flex-1">
               <Button variant="secondary" className="w-full">
                 Back to Chat
               </Button>
@@ -27,4 +29,3 @@ export function SuccessPage() {
     </div>
   );
 }
-

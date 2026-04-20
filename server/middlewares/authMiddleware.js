@@ -1,5 +1,5 @@
 const jwt = require("../utils/jwt");
-const { findUserByMobile } = require("../models/userModel.js");
+const { findUserByEmail, toPublicUser } = require("../models/userModel.js");
 
 async function authMiddleware(req, res, next) {
   try {
@@ -13,14 +13,14 @@ async function authMiddleware(req, res, next) {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.validateToken(token);
 
-    const mobile = decoded.mobile;
-    const user = await findUserByMobile(mobile);
+    const email = decoded.email;
+    const user = await findUserByEmail(email);
 
     if (!user) {
       return res.status(401).json({ success: false, error: "User not found" });
     }
 
-    req.user = user;
+    req.user = toPublicUser(user);
     next();
   } catch (error) {
     return res

@@ -7,7 +7,6 @@ const userRoutes = require("./routes/userRoutes.js");
 const chatroomRoutes = require("./routes/chatroomRoutes.js");
 const messageRoutes = require("./routes/messageRoutes.js");
 const subscriptionRoutes = require("./routes/subscriptionRoutes.js");
-const webhookRoute = require("./routes/webhookRoute.js");
 
 const authMiddleware = require("./middlewares/authMiddleware.js");
 const errorMiddleware = require("./middlewares/errorMiddleware.js");
@@ -21,7 +20,6 @@ async function initializeDatabase() {
   console.log("Connected to PostgreSQL");
 }
 
-app.use("/webhook/stripe", express.raw({ type: "application/json" }), webhookRoute);
 app.use(express.json());
 
 app.use("/auth", authRoutes);
@@ -33,16 +31,25 @@ app.use("/", subscriptionRoutes);
 app.use(errorMiddleware);
 
 async function startServer() {
-  try {
-    await initializeDatabase();
+  await initializeDatabase();
 
-    app.listen(PORT, () => {
+  return new Promise((resolve) => {
+    const server = app.listen(PORT, () => {
       console.log(`Server started at http://localhost:${PORT}`);
+      resolve(server);
     });
-  } catch (error) {
-    console.error("DB connection error:", error);
-    process.exit(1);
-  }
+  });
 }
 
-startServer();
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error("DB connection error:", error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  app,
+  initializeDatabase,
+  startServer,
+};

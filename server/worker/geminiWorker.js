@@ -6,28 +6,33 @@ const { MESSAGE_QUEUE_NAME, createBullConnection } = require("../config/bullMQ.j
 const messageModel = require("../models/messageModel.js");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 async function callGeminiAPI(userText) {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const result = await model.generateContent(userText);
-    return result.response.text();
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    return "Sorry, something went wrong with Gemini.";
-  }
+  const model = genAI.getGenerativeModel({ model: geminiModel });
+  const result = await model.generateContent(userText);
+  return result.response.text();
 }
 
 function startWorker() {
   const worker = new Worker(
     MESSAGE_QUEUE_NAME,
     async (job) => {
-      const { chatroom_id, text } = job.data;
+      const { chatroom_id, text, user_message_id } = job.data;
 
-      const geminiReply = await callGeminiAPI(text);
-      await messageModel.addGeminiMessage(chatroom_id, geminiReply);
+      try {
+        const geminiReply = await callGeminiAPI(text);
+        await messageModel.addGeminiMessage(chatroom_id, geminiReply);
+        await messageModel.updateMessageStatus(user_message_id, "completed");
 
-      return { reply: geminiReply };
+        return { reply: geminiReply };
+      } catch (error) {
+        await messageModel.updateMessageStatus(user_message_id, "failed");
+        console.error("Gemini API error:", error);
+        throw new Error(
+          error?.message || "Gemini request failed"
+        );
+      }
     },
     {
       connection: createBullConnection(),

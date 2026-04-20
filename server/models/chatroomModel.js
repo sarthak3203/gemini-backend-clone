@@ -38,9 +38,20 @@ async function findChatroomById(id) {
   return formatChatroom(result.rows[0]);
 }
 
+async function findChatroomByIdForUser(id, userId) {
+  const result = await pool.query(
+    `SELECT id, title, user_id, created_by, created_at
+     FROM chatrooms
+     WHERE id = $1 AND user_id = $2`,
+    [Number(id), Number(userId)]
+  );
+
+  return formatChatroom(result.rows[0]);
+}
+
 async function findMessagesByChatroomId(chatroomId) {
   const result = await pool.query(
-    `SELECT id, sender, message_text
+    `SELECT id, sender, message_text, status
      FROM messages
      WHERE chatroom_id = $1
      ORDER BY created_at ASC`,
@@ -54,5 +65,6 @@ module.exports = {
   createChatroom,
   getChatroomsByUser,
   findChatroomById,
+  findChatroomByIdForUser,
   findMessagesByChatroomId,
 };

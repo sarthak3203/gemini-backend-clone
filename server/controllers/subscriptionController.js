@@ -1,37 +1,21 @@
-const stripe = require('../config/stripe');
-const PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 const userModel = require('../models/userModel'); 
+const FREE_DAILY_LIMIT = 20;
 
 async function createProSubscription(req, res){
   try {
     const user = req.user; 
-
-    let stripeCustomerId = user.stripe_customer_id;
-
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        metadata: { userId: user.id.toString() },
-        phone: user.mobile,
-      });
-      stripeCustomerId = customer.id;
-
-      await userModel.updateStripeCustomerId(user.id, stripeCustomerId);
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      customer: stripeCustomerId,
-      line_items: [{ price: PRO_PRICE_ID, quantity: 1 }],
-      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
-      metadata: { userId: user.id.toString() },
+    return res.status(503).json({
+      success: false,
+      code: "PRO_SUBSCRIPTION_COMING_SOON",
+      message: "Pro subscriptions are under development. Free users can currently send up to 20 messages per day.",
     });
-
-    res.status(200).json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Stripe checkout session error:', error);
-    res.status(500).json({ error: 'Failed to create subscription session' });
+    console.error("Create pro subscription error:", error);
+    res.status(500).json({ success: false, error: "Failed to load subscription info" });
   }
 };
 
@@ -45,9 +29,20 @@ async function checkSubscriptionStatus(req, res) {
 
         const id = user.id;
         const status = await userModel.checkUserStatus(id);
-        const subscription_status = status.subscription;
+        const subscription_status = status?.subscription || "BASIC";
 
-        return res.status(200).json({success:true,message:`User subscription is ${subscription_status}`})
+        return res.status(200).json({
+          success:true,
+          message:`User subscription is ${subscription_status}`,
+          subscription: subscription_status,
+          limits: {
+            free_daily_messages: FREE_DAILY_LIMIT,
+          },
+          pro: {
+            available: false,
+            message: "We are working on this feature.",
+          },
+        })
         
     } catch (error) {
         return res.status(500).json({success:false, message:error.message})
