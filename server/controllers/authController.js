@@ -24,23 +24,46 @@ function getOtpExpiryDate() {
 }
 
 function getEmailDeliveryError(error) {
-  const message = error?.message || "";
+  const message = `${error?.providerMessage || ""} ${error?.message || ""}`.trim();
+  const normalizedMessage = message.toLowerCase();
 
-  if (message.toLowerCase().includes("domain is not verified")) {
+  if (normalizedMessage.includes("domain is not verified")) {
     return {
       status: 503,
       payload: {
         success: false,
-        error: "Email delivery is not configured correctly. Verify the RESEND_FROM_EMAIL domain in Resend.",
+        error:
+          "Email delivery is not configured correctly. The RESEND_FROM_EMAIL domain is not verified in Resend.",
+      },
+    };
+  }
+
+  if (normalizedMessage.includes("only send testing emails to your own email address")) {
+    return {
+      status: 503,
+      payload: {
+        success: false,
+        error:
+          "Email delivery is still in Resend testing mode. Verify your sending domain to deliver OTPs to other users.",
+      },
+    };
+  }
+
+  if (normalizedMessage.includes("resend_api_key is missing")) {
+    return {
+      status: 500,
+      payload: {
+        success: false,
+        error: "RESEND_API_KEY is missing in server/.env.",
       },
     };
   }
 
   return {
-    status: 500,
+    status: error?.status || 500,
     payload: {
       success: false,
-      error: "Server error",
+      error: error?.providerMessage || message || "Server error",
     },
   };
 }

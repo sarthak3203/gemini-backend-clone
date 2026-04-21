@@ -16,13 +16,13 @@ export function AuthLayout() {
               Collaborative AI chat, designed for focus.
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-[rgb(var(--text-muted))]">
-              Sign in with email OTP to access your chatrooms, ask Gemini questions, and manage your subscription in one clean workspace.
+              Create an account, verify it by email OTP, sign in securely, and manage your workspace from one clean console.
             </p>
 
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-[rgb(var(--border))] bg-white/85 p-3">
                 <div className="text-xs font-semibold text-[rgb(var(--text-muted))]">Authentication</div>
-                <div className="mt-1 text-sm font-semibold">Email OTP</div>
+                <div className="mt-1 text-sm font-semibold">Email OTP + Password</div>
               </div>
               <div className="rounded-xl border border-[rgb(var(--border))] bg-white/85 p-3">
                 <div className="text-xs font-semibold text-[rgb(var(--text-muted))]">Chat Layer</div>

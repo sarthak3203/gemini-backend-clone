@@ -3,9 +3,12 @@ import { apiRequest } from "./api";
 export const backend = {
   auth: {
     signup: (data) => apiRequest("/auth/signup", { method: "POST", data }),
+    verifySignup: (data) => apiRequest("/auth/signup/verify", { method: "POST", data }),
+    login: (data) => apiRequest("/auth/login", { method: "POST", data }),
     sendOtp: (data) => apiRequest("/auth/send-otp", { method: "POST", data }),
     verifyOtp: (data) => apiRequest("/auth/verify-otp", { method: "POST", data }),
     forgotPassword: (data) => apiRequest("/auth/forgot-password", { method: "POST", data }),
+    resetPassword: (data) => apiRequest("/auth/reset-password", { method: "POST", data }),
     changePassword: (token, data) =>
       apiRequest("/auth/change-password", { method: "POST", token, data }),
   },

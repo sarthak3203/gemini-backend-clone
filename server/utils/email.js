@@ -1,11 +1,21 @@
 const { Resend } = require("resend");
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.RESEND_FROM_EMAIL || "Acme <onboarding@resend.dev>";
+function createEmailDeliveryError(message, status = 503, extra = {}) {
+  const error = new Error(message);
+  error.name = "EmailDeliveryError";
+  error.status = status;
+  Object.assign(error, extra);
+  return error;
+}
 
 function getResendClient() {
+  const resendApiKey = process.env.RESEND_API_KEY;
+
   if (!resendApiKey) {
-    throw new Error("RESEND_API_KEY is missing in server/.env");
+    throw createEmailDeliveryError("RESEND_API_KEY is missing in server/.env", 500, {
+      provider: "resend",
+      providerCode: "missing_api_key",
+    });
   }
 
   return new Resend(resendApiKey);
@@ -13,6 +23,7 @@ function getResendClient() {
 
 async function sendOtpEmail(email, otpCode, purpose = "LOGIN") {
   const resend = getResendClient();
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "Acme <onboarding@resend.dev>";
   const subjectMap = {
     SIGNUP: "Complete your signup",
     LOGIN: "Your login code",
@@ -30,7 +41,7 @@ async function sendOtpEmail(email, otpCode, purpose = "LOGIN") {
     </div>
   `;
 
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: fromEmail,
     to: [email],
     subject,
@@ -39,8 +50,16 @@ async function sendOtpEmail(email, otpCode, purpose = "LOGIN") {
   });
 
   if (error) {
-    throw new Error(error.message || "Failed to send email with Resend");
+    throw createEmailDeliveryError(error.message || "Failed to send email with Resend", error.statusCode || 503, {
+      provider: "resend",
+      providerCode: error.name || "resend_error",
+      providerMessage: error.message || "Failed to send email with Resend",
+      fromEmail,
+      recipient: email,
+    });
   }
+
+  return data;
 }
 
 module.exports = {
