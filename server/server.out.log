@@ -4,3 +4,4 @@
 [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
 Connected to PostgreSQL
 Server started at http://localhost:5000
+Connected to Redis

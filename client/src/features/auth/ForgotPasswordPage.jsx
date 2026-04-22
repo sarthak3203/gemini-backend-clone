@@ -28,7 +28,7 @@ export function ForgotPasswordPage() {
         email: email.trim().toLowerCase(),
       });
       setPhase("reset");
-      setInfo(res?.message || "OTP sent");
+      setInfo(res?.message || "OTP sent successfully");
     } catch (e) {
       setError(e.message || "Failed to send OTP");
     } finally {
@@ -57,67 +57,93 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div>
-      <div className="text-sm font-semibold text-[rgb(var(--text-muted))]">Account recovery</div>
-      <div className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-        Request a reset OTP, then set a new password using the code from your email.
+    <div className="mx-auto w-full max-w-md p-6">
+      <div className="mb-8 flex flex-col items-center text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.7 1.5-1.7 1.5-2.7 0-2.2-1.8-4-4-4s-4 1.8-4 4c0 .6.1 1.1.4 1.5l-5 5v3h3l1.5-1.5M15 14a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg>
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          {phase === "email" ? "Forgot password?" : "Verify your identity"}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {phase === "email" 
+            ? "No worries, we'll send you reset instructions." 
+            : `We've sent a code to ${email}`}
+        </p>
       </div>
 
-      <div className="mt-5 space-y-3">
-        <div>
-          <label className="text-xs font-medium text-[rgb(var(--text-muted))]">Email</label>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium leading-none">Email</label>
           <Input
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder="enter your email"
             disabled={phase === "reset" || loading}
+            className="h-11 shadow-sm transition-all focus:ring-2"
           />
         </div>
+
         {phase === "reset" && (
-          <>
-            <div>
-              <label className="text-xs font-medium text-[rgb(var(--text-muted))]">OTP</label>
+          <div className="space-y-4 duration-500 animate-in fade-in slide-in-from-top-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none">OTP Code</label>
               <Input
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter the code from your email"
+                placeholder="000000"
                 disabled={loading}
+                className="h-11 text-center font-mono text-lg tracking-[0.3em]"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-[rgb(var(--text-muted))]">New password</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none">New Password</label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder="••••••••"
                 disabled={loading}
+                className="h-11"
               />
             </div>
-          </>
+          </div>
         )}
       </div>
 
-      {error && (
-        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {info && (
-        <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {info}
+      {(error || info) && (
+        <div className={`mt-4 rounded-lg border p-3 text-sm flex items-center gap-2 ${
+          error ? "border-destructive/20 bg-destructive/10 text-destructive" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+        }`}>
+          {error ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          )}
+          {error || info}
         </div>
       )}
 
-      <div className="mt-5 flex gap-2">
+      <div className="mt-6 flex flex-col gap-3">
         {phase === "email" ? (
-          <Button onClick={sendResetOtp} disabled={!canSend || loading} className="w-full">
-            {loading ? "Sending..." : "Send reset OTP"}
+          <Button 
+            onClick={sendResetOtp} 
+            disabled={!canSend || loading} 
+            className="h-11 w-full text-sm font-semibold"
+          >
+            {loading ? "Sending..." : "Send Reset OTP"}
           </Button>
         ) : (
           <>
-            <Button
-              variant="secondary"
+            <Button 
+              onClick={resetPassword} 
+              disabled={!canReset || loading} 
+              className="h-11 w-full text-sm font-semibold"
+            >
+              {loading ? "Resetting..." : "Update Password"}
+            </Button>
+            <button
               onClick={() => {
                 setPhase("email");
                 setOtp("");
@@ -126,19 +152,20 @@ export function ForgotPasswordPage() {
                 setInfo("");
               }}
               disabled={loading}
-              className="w-full"
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Back
-            </Button>
-            <Button onClick={resetPassword} disabled={!canReset || loading} className="w-full">
-              {loading ? "Resetting..." : "Reset password"}
-            </Button>
+              Didn't get the code? Click to go back
+            </button>
           </>
         )}
       </div>
 
-      <div className="mt-5 text-sm text-[rgb(var(--text-muted))]">
-        <Link className="underline-offset-4 hover:underline" to="/login">
+      <div className="mt-8 text-center">
+        <Link 
+          to="/login" 
+          className="group inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:-translate-x-1"><path d="m15 18-6-6 6-6"/></svg>
           Back to login
         </Link>
       </div>

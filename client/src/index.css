@@ -1,12 +1,38 @@
+@import "tailwindcss";
+
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap");
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  /* Syncing your custom variables into the Tailwind v4 engine */
+  --color-background: rgb(var(--bg));
+  --color-foreground: rgb(var(--text));
+  
+  --color-card: rgb(var(--card));
+  --color-card-foreground: rgb(var(--text));
+
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: #ffffff;
+
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--text-muted));
+
+  --color-border: rgb(var(--border));
+  --color-destructive: rgb(var(--danger));
+  --color-warning: rgb(var(--warning));
+  --color-accent: rgb(var(--accent));
+
+  --font-sans: "Manrope", "sans-serif";
+  --font-display: "Space Grotesk", "sans-serif";
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+}
 
 :root {
   color-scheme: light;
 
+  /* Raw RGB values for variable composition */
   --bg: 244 247 245;
   --surface: 236 243 239;
   --card: 255 255 255;
@@ -22,35 +48,40 @@
   --warning: 180 107 26;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-}
+@layer base {
+  *, ::after, ::before {
+    border-color: var(--color-border);
+  }
 
-body {
-  margin: 0;
-  background:
-    radial-gradient(circle at 5% 0%, rgba(236, 130, 77, 0.23), transparent 35%),
-    radial-gradient(circle at 95% 0%, rgba(23, 128, 103, 0.24), transparent 40%),
-    linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 35%, rgb(var(--bg)) 100%);
-  color: rgb(var(--text));
-  font-family: "Manrope", "Segoe UI", sans-serif;
-  text-rendering: optimizeLegibility;
-}
+  body {
+    margin: 0;
+    background: 
+      radial-gradient(circle at 5% 0%, rgba(236, 130, 77, 0.12), transparent 35%),
+      radial-gradient(circle at 95% 0%, rgba(23, 128, 103, 0.12), transparent 40%),
+      linear-gradient(180deg, rgb(var(--surface)) 0%, rgb(var(--bg)) 35%, rgb(var(--bg)) 100%);
+    @apply bg-background text-foreground font-sans antialiased;
+    min-height: 100vh;
+  }
 
-h1,
-h2,
-h3,
-h4 {
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-  outline-color: rgb(var(--primary));
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
 }
 
 ::selection {
-  background: rgba(23, 128, 103, 0.18);
+  background: rgba(23, 128, 103, 0.2);
+  color: rgb(var(--text));
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted rounded-full hover:bg-border transition-colors;
 }

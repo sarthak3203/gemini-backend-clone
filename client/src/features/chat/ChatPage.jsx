@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "../../app/auth/AuthContext";
 import { ApiError } from "../../lib/api";
 import { backend } from "../../lib/backend";
@@ -9,12 +9,13 @@ import { Spinner } from "../../components/ui/Spinner";
 
 function formatSender(sender) {
   if (sender === "USER") return "You";
-  if (sender === "GEMINI") return "Gemini";
+  if (sender === "GEMINI") return "Gemini AI";
   return sender || "Unknown";
 }
 
 export function ChatPage() {
   const { token } = useAuth();
+  const scrollRef = useRef(null);
 
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [roomsError, setRoomsError] = useState("");
@@ -33,6 +34,13 @@ export function ChatPage() {
 
   const canCreateRoom = useMemo(() => newTitle.trim().length >= 2, [newTitle]);
   const canSend = useMemo(() => text.trim().length > 0 && Boolean(activeRoom), [text, activeRoom]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const loadRooms = useCallback(async () => {
     setRoomsError("");
@@ -113,147 +121,145 @@ export function ChatPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[330px_1fr]">
-      <Card className="p-4 sm:p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-muted))]">Rooms</div>
-            <h2 className="mt-1 text-xl font-bold tracking-tight">Chatrooms</h2>
+    <div className="flex h-[calc(100vh-120px)] flex-col gap-4 lg:flex-row">
+      {/* Sidebar: Chatrooms */}
+      <Card className="flex flex-col lg:w-[350px] overflow-hidden border-none shadow-md ring-1 ring-border/50">
+        <div className="p-5 border-b border-border/40">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold tracking-tight">Conversations</h2>
+            {roomsLoading && <Spinner className="h-4 w-4" />}
           </div>
-          {roomsLoading && <Spinner />}
+          <div className="flex gap-2">
+            <Input 
+              value={newTitle} 
+              onChange={(e) => setNewTitle(e.target.value)} 
+              placeholder="Room name..." 
+              className="h-9 text-sm"
+            />
+            <Button size="sm" onClick={createRoom} disabled={!canCreateRoom || roomsLoading}>
+              New
+            </Button>
+          </div>
         </div>
 
-        {roomsError && (
-          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {roomsError}
-          </div>
-        )}
-
-        <div className="mt-4 flex gap-2">
-          <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="New room title" />
-          <Button variant="secondary" onClick={createRoom} disabled={!canCreateRoom || roomsLoading}>
-            Create
-          </Button>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {!roomsLoading && rooms.length === 0 && (
-            <div className="rounded-xl border border-[rgb(var(--border))] bg-white px-3 py-3 text-sm text-[rgb(var(--text-muted))]">
-              No chatrooms yet. Create your first room.
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {rooms.length === 0 && !roomsLoading && (
+            <div className="p-4 text-center text-sm text-muted-foreground italic">
+              No rooms found
             </div>
           )}
-
           {rooms.map((room) => {
             const active = activeRoom?.id === room.id;
             return (
               <button
                 key={room.id}
                 onClick={() => selectRoom(room)}
-                className={`w-full rounded-xl border px-3 py-3 text-left text-sm transition ${
+                className={`group flex w-full flex-col items-start rounded-lg px-4 py-3 transition-all ${
                   active
-                    ? "border-emerald-300 bg-emerald-50/80 shadow-sm"
-                    : "border-[rgb(var(--border))] bg-white hover:-translate-y-0.5 hover:bg-[rgb(var(--muted))]"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    : "hover:bg-muted"
                 }`}
               >
-                <div className="font-semibold">{room.title}</div>
-                <div className="mt-0.5 text-xs text-[rgb(var(--text-muted))]">Room #{room.id}</div>
+                <span className="text-sm font-semibold truncate w-full">{room.title}</span>
+                <span className={`text-[10px] uppercase tracking-wider opacity-70 ${active ? "text-white" : "text-muted-foreground"}`}>
+                  ID: {room.id}
+                </span>
               </button>
             );
           })}
         </div>
       </Card>
 
-      <Card className="p-4 sm:p-5">
+      {/* Main Chat Area */}
+      <Card className="flex flex-1 flex-col overflow-hidden border-none shadow-md ring-1 ring-border/50 bg-muted/20">
         {!activeRoom ? (
-          <div className="grid min-h-[500px] place-items-center rounded-2xl border border-dashed border-[rgb(var(--border))] bg-white/60">
-            <div className="px-4 text-center">
-              <h3 className="text-lg font-bold tracking-tight">Choose a chatroom to begin</h3>
-              <p className="mt-2 text-sm text-[rgb(var(--text-muted))]">
-                This screen maps to `GET /chatroom/:id` and `POST /chatroom/:id/message`.
-              </p>
+          <div className="flex flex-1 flex-col items-center justify-center text-center p-8">
+            <div className="mb-4 rounded-full bg-primary/10 p-6 text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
+            <h3 className="text-xl font-bold">Select a chatroom</h3>
+            <p className="mx-auto mt-2 max-w-[280px] text-sm text-muted-foreground">
+              Choose an existing room or create a new one to start chatting with Gemini AI.
+            </p>
           </div>
         ) : (
-          <div className="flex min-h-[560px] flex-col">
-            <div className="flex items-start justify-between gap-3 border-b border-[rgb(var(--border))] pb-3">
+          <>
+            {/* Chat Header */}
+            <div className="flex items-center justify-between border-b bg-background/50 px-6 py-4 backdrop-blur-md">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[rgb(var(--text-muted))]">
-                  Active room
-                </div>
-                <h3 className="mt-1 text-lg font-bold tracking-tight">{activeRoom.title}</h3>
+                <h3 className="text-base font-bold leading-none">{activeRoom.title}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Connected to Gemini</p>
               </div>
-              <Button variant="secondary" onClick={() => loadThread(activeRoom)} disabled={threadLoading}>
-                {threadLoading ? "Refreshing..." : "Refresh"}
+              <Button variant="ghost" size="sm" onClick={() => loadThread(activeRoom)} disabled={threadLoading}>
+                <svg className={`mr-2 h-4 w-4 ${threadLoading ? "animate-spin" : ""}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="22 4 22 10 16 10"/></svg>
+                Sync
               </Button>
             </div>
 
-            {threadError && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {threadError}
-              </div>
-            )}
-
-            <div className="mt-4 flex-1 space-y-2 overflow-auto rounded-2xl border border-[rgb(var(--border))] bg-white/80 p-3">
-              {threadLoading && messages.length === 0 && (
-                <div className="flex items-center gap-2 text-sm text-[rgb(var(--text-muted))]">
-                  <Spinner /> Loading messages...
-                </div>
-              )}
-              {!threadLoading && messages.length === 0 && (
-                <div className="text-sm text-[rgb(var(--text-muted))]">No messages yet. Start the conversation.</div>
-              )}
-
+            {/* Messages Area */}
+            <div 
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth"
+            >
               {messages.map((message, index) => {
-                const mine = message.sender === "USER";
+                const isUser = message.sender === "USER";
                 return (
-                  <div key={`${message.sender}-${index}`} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[90%] rounded-2xl border px-3 py-2.5 text-sm ${
-                        mine
-                          ? "border-emerald-300 bg-emerald-50"
-                          : "border-[rgb(var(--border))] bg-[rgb(var(--muted))]"
-                      }`}
-                    >
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-[rgb(var(--text-muted))]">
+                  <div key={`${message.sender}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                    <div className={`group relative flex max-w-[85%] flex-col gap-1`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 ${isUser ? "text-right" : "text-left"}`}>
                         {formatSender(message.sender)}
-                      </div>
-                      <div className="mt-1 whitespace-pre-wrap leading-relaxed text-[rgb(var(--text))]">
-                        {message.message_text}
+                      </span>
+                      <div
+                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm transition-all ${
+                          isUser
+                            ? "bg-primary text-primary-foreground rounded-tr-none"
+                            : "bg-background border border-border/50 text-foreground rounded-tl-none"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.message_text}</p>
                       </div>
                     </div>
                   </div>
                 );
               })}
+              {threadLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-background border border-border/50 rounded-2xl rounded-tl-none px-4 py-3">
+                    <Spinner className="h-4 w-4" />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {sendError && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {sendError}
+            {/* Input Footer */}
+            <div className="border-t bg-background p-4 px-6">
+              {sendError && <p className="mb-2 text-xs font-medium text-red-500 animate-in fade-in">{sendError}</p>}
+              {sendInfo && <p className="mb-2 text-xs font-medium text-amber-600 animate-in fade-in">{sendInfo}</p>}
+              
+              <div className="flex items-center gap-3">
+                <Input
+                  className="flex-1 h-11 border-muted focus-visible:ring-primary"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Type a message..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (!sendLoading && canSend) sendMessage();
+                    }
+                  }}
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={!canSend || sendLoading} 
+                  className="h-11 px-6 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
+                >
+                  {sendLoading ? <Spinner className="h-4 w-4" /> : "Send"}
+                </Button>
               </div>
-            )}
-            {sendInfo && (
-              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                {sendInfo}
-              </div>
-            )}
-
-            <div className="mt-3 flex gap-2">
-              <Input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Ask Gemini anything..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (!sendLoading) sendMessage();
-                  }
-                }}
-              />
-              <Button onClick={sendMessage} disabled={!canSend || sendLoading}>
-                {sendLoading ? "Sending..." : "Send"}
-              </Button>
             </div>
-          </div>
+          </>
         )}
       </Card>
     </div>

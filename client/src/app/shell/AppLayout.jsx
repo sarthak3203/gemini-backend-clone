@@ -20,8 +20,9 @@ function TopNav() {
 
   const subscriptionTone = useMemo(() => {
     if (!me?.subscription) return "neutral";
-    if (String(me.subscription).toLowerCase() === "pro") return "pro";
-    if (String(me.subscription).toLowerCase() === "canceled") return "warning";
+    const sub = String(me.subscription).toLowerCase();
+    if (sub === "pro") return "pro";
+    if (sub === "canceled") return "warning";
     return "neutral";
   }, [me]);
 
@@ -36,9 +37,7 @@ function TopNav() {
       }
     }
     if (token) loadMe();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token]);
 
   async function changePassword() {
@@ -47,8 +46,9 @@ function TopNav() {
     setPwLoading(true);
     try {
       await backend.auth.changePassword(token, { password: pw });
-      setPwInfo("Password updated.");
+      setPwInfo("Password updated successfully.");
       setPw("");
+      setTimeout(() => setPwOpen(false), 2000);
     } catch (e) {
       setPwError(e.message || "Failed to change password");
     } finally {
@@ -58,26 +58,26 @@ function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-[rgb(var(--border))]/80 bg-[rgb(var(--bg))]/90 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link to="/app" className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[rgb(var(--primary))] text-sm font-bold text-white shadow-lg shadow-emerald-900/20">
+      <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+          {/* Logo Section */}
+          <Link to="/app" className="group flex items-center gap-3 transition-opacity hover:opacity-90">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary font-black text-white shadow-lg shadow-primary/20 ring-1 ring-white/20">
               G
             </div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgb(var(--text-muted))]">Control</div>
-              <div className="text-base font-bold tracking-tight">Gemini Console</div>
+            <div className="hidden flex-col sm:flex">
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/70">Console</span>
+              <span className="text-sm font-extrabold tracking-tight text-foreground">Gemini Workspace</span>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-2 sm:flex">
+          {/* Desktop Nav */}
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-2xl border border-border/50 bg-muted/30 p-1 sm:flex">
             <NavLink
               to="/app"
               className={({ isActive }) =>
-                `rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-white text-[rgb(var(--text))] shadow-sm"
-                    : "text-[rgb(var(--text-muted))] hover:bg-white/70 hover:text-[rgb(var(--text))]"
+                `rounded-xl px-4 py-1.5 text-xs font-bold transition-all ${
+                  isActive ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                 }`
               }
             >
@@ -86,10 +86,8 @@ function TopNav() {
             <NavLink
               to="/billing"
               className={({ isActive }) =>
-                `rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-white text-[rgb(var(--text))] shadow-sm"
-                    : "text-[rgb(var(--text-muted))] hover:bg-white/70 hover:text-[rgb(var(--text))]"
+                `rounded-xl px-4 py-1.5 text-xs font-bold transition-all ${
+                  isActive ? "bg-background text-primary shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
                 }`
               }
             >
@@ -97,100 +95,100 @@ function TopNav() {
             </NavLink>
           </nav>
 
+          {/* User Menu */}
           <div className="relative">
             <button
-              className="flex items-center gap-2 rounded-xl border border-[rgb(var(--border))] bg-white px-3 py-2 shadow-sm hover:bg-[rgb(var(--muted))]"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 rounded-2xl border border-border/50 bg-background/50 p-1.5 pl-3 transition-all hover:bg-muted active:scale-95"
             >
-              <span className="max-w-[160px] truncate text-sm font-semibold">{me?.name || me?.email || "Account"}</span>
-              <Badge tone={subscriptionTone}>{me?.subscription || "Basic"}</Badge>
+              <span className="max-w-[100px] truncate text-xs font-bold text-foreground sm:max-w-[160px]">
+                {me?.name || me?.email?.split('@')[0] || "Account"}
+              </span>
+              <Badge tone={subscriptionTone} className="h-6 scale-90">
+                {me?.subscription || "Basic"}
+              </Badge>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
             </button>
 
             {menuOpen && (
-              <Card className="absolute right-0 mt-2 w-72 p-3" role="menu">
-                <div className="px-2 pb-3">
-                  <div className="text-xs font-semibold text-[rgb(var(--text-muted))]">Signed in as</div>
-                  <div className="mt-1 truncate text-sm font-semibold">{me?.email || "-"}</div>
-                </div>
-                <div className="space-y-1 border-t border-[rgb(var(--border))] pt-2">
-                  <Button variant="ghost" className="w-full justify-start" onClick={() => setPwOpen(true)}>
-                    Change password
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate("/billing");
-                    }}
-                  >
-                    Billing
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-[rgb(var(--danger))]"
-                    onClick={() => {
-                      logout();
-                      navigate("/login");
-                    }}
-                  >
-                    Logout
-                  </Button>
-                </div>
-              </Card>
+              <>
+                <div className="fixed inset-0 z-[-1]" onClick={() => setMenuOpen(false)} />
+                <Card className="absolute right-0 mt-3 w-64 overflow-hidden border-none p-1.5 shadow-2xl ring-1 ring-border animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Authenticated as</p>
+                    <p className="mt-0.5 truncate text-sm font-semibold text-foreground">{me?.email || "-"}</p>
+                  </div>
+                  <div className="space-y-1 rounded-2xl bg-muted/30 p-1">
+                    <Button variant="ghost" className="h-9 w-full justify-start text-xs font-bold" onClick={() => { setPwOpen(true); setMenuOpen(false); }}>
+                      Security Settings
+                    </Button>
+                    <Button variant="ghost" className="h-9 w-full justify-start text-xs font-bold" onClick={() => { navigate("/billing"); setMenuOpen(false); }}>
+                      Plan & Billing
+                    </Button>
+                    <div className="my-1 h-px bg-border/50" />
+                    <Button
+                      variant="ghost"
+                      className="h-9 w-full justify-start text-xs font-bold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => { logout(); navigate("/login"); }}
+                    >
+                      Sign Out
+                    </Button>
+                  </div>
+                </Card>
+              </>
             )}
           </div>
         </div>
       </header>
 
+      {/* Password Modal */}
       {pwOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <Card className="w-full max-w-md p-6">
-            <h3 className="text-lg font-bold tracking-tight">Change password</h3>
-            <p className="mt-1 text-sm text-[rgb(var(--text-muted))]">
-              This calls the backend route `POST /auth/change-password`.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-md border-none p-8 shadow-2xl ring-1 ring-border">
+            <h3 className="text-xl font-extrabold tracking-tight">Update Security</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Enter a new secure password for your workspace account.
             </p>
 
-            <div className="mt-4 space-y-2">
-              <label className="text-xs font-semibold text-[rgb(var(--text-muted))]">New password</label>
-              <Input
-                type="password"
-                value={pw}
-                onChange={(e) => setPw(e.target.value)}
-                placeholder="Choose a strong password"
-              />
-            </div>
-
-            {pwError && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {pwError}
+            <div className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">New Password</label>
+                <Input
+                  type="password"
+                  autoFocus
+                  value={pw}
+                  onChange={(e) => setPw(e.target.value)}
+                  placeholder="Minimum 8 characters"
+                  className="h-12"
+                />
               </div>
-            )}
-            {pwInfo && (
-              <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                {pwInfo}
-              </div>
-            )}
 
-            <div className="mt-4 flex gap-2">
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => {
-                  setPwOpen(false);
-                  setPw("");
-                  setPwError("");
-                  setPwInfo("");
-                }}
-                disabled={pwLoading}
-              >
-                Cancel
-              </Button>
-              <Button className="w-full" onClick={changePassword} disabled={!pw || pwLoading}>
-                {pwLoading ? "Updating..." : "Update"}
-              </Button>
+              {pwError && (
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-xs font-bold text-destructive animate-in slide-in-from-top-1">
+                  {pwError}
+                </div>
+              )}
+              {pwInfo && (
+                <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-xs font-bold text-primary animate-in slide-in-from-top-1">
+                  {pwInfo}
+                </div>
+              )}
+
+              <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                <Button
+                  variant="secondary"
+                  className="h-12 flex-1"
+                  onClick={() => { setPwOpen(false); setPw(""); setPwError(""); setPwInfo(""); }}
+                  disabled={pwLoading}
+                >
+                  Cancel
+                </Button>
+                <Button className="h-12 flex-[2]" onClick={changePassword} disabled={!pw || pwLoading}>
+                  {pwLoading ? "Saving..." : "Update Password"}
+                </Button>
+              </div>
             </div>
           </Card>
         </div>
@@ -201,9 +199,9 @@ function TopNav() {
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background selection:bg-primary/10">
       <TopNav />
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl animate-in fade-in slide-in-from-bottom-2 duration-500 px-4 py-8 sm:px-6">
         <Outlet />
       </main>
     </div>
