@@ -12,6 +12,7 @@ export function LoginPage() {
   const [method, setMethod] = useState("otp"); // otp | password
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
   const [phase, setPhase] = useState("email"); // email | otp
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export function LoginPage() {
     setPhase("email");
     setOtp("");
     setPassword("");
+    setShowPassword(false);
     resetMessages();
   }
 
@@ -174,14 +176,24 @@ export function LoginPage() {
                 Forgot?
               </Link>
             </div>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              disabled={loading}
-              className="h-12 border-muted-foreground/20 focus:ring-2 transition-all"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                disabled={loading}
+                className="h-12 border-muted-foreground/20 pr-20 focus:ring-2 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                disabled={loading}
+                className="absolute inset-y-0 right-3 my-auto h-fit text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
         )}
       </div>

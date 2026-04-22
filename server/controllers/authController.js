@@ -14,6 +14,8 @@ const bcrypt = require("bcryptjs");
 
 const OTP_EXPIRY_MS = 3 * 60 * 1000;
 const PASSWORD_SALT_ROUNDS = 8;
+const SIGNUP_PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function normalizeEmail(email) {
   return email.toString().trim().toLowerCase();
@@ -96,10 +98,14 @@ async function signup(req, res) {
         .json({ success: false, error: "Name, email, and password are required" });
     }
 
-    if (password.length < 6) {
+    if (!SIGNUP_PASSWORD_REGEX.test(password)) {
       return res
         .status(400)
-        .json({ success: false, error: "Password must be at least 6 characters long" });
+        .json({
+          success: false,
+          error:
+            "Password must be at least 8 characters and include uppercase, lowercase, number, and special character",
+        });
     }
 
     const normalizedEmail = normalizeEmail(email);

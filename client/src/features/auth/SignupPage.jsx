@@ -1,9 +1,31 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import zxcvbn from "zxcvbn";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { backend } from "../../lib/backend";
 import { useAuth } from "../../app/auth/AuthContext";
+
+const passwordRules = [
+  { id: "length", label: "At least 8 characters", test: (value) => value.length >= 8 },
+  { id: "upper", label: "One uppercase letter", test: (value) => /[A-Z]/.test(value) },
+  { id: "lower", label: "One lowercase letter", test: (value) => /[a-z]/.test(value) },
+  { id: "number", label: "One number", test: (value) => /\d/.test(value) },
+  {
+    id: "special",
+    label: "One special character",
+    test: (value) => /[^A-Za-z0-9]/.test(value),
+  },
+];
+
+const strengthLabels = ["Very Weak", "Weak", "Fair", "Strong", "Very Strong"];
+const strengthColors = [
+  "bg-red-500",
+  "bg-orange-500",
+  "bg-amber-500",
+  "bg-lime-500",
+  "bg-emerald-500",
+];
 
 export function SignupPage() {
   const { login } = useAuth();
@@ -12,15 +34,26 @@ export function SignupPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
   const [phase, setPhase] = useState("details"); // details | otp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
+  const passwordChecks = useMemo(
+    () => passwordRules.map((rule) => ({ ...rule, passed: rule.test(password) })),
+    [password]
+  );
+  const passwordStrength = useMemo(() => zxcvbn(password), [password]);
+  const isPasswordValid = useMemo(
+    () => passwordChecks.every((rule) => rule.passed),
+    [passwordChecks]
+  );
+
   const canSubmit = useMemo(
-    () => name.trim().length > 0 && /\S+@\S+\.\S+/.test(email.trim()) && password.length >= 6,
-    [email, name, password]
+    () => name.trim().length > 0 && /\S+@\S+\.\S+/.test(email.trim()) && isPasswordValid,
+    [email, isPasswordValid, name]
   );
   const canVerify = useMemo(
     () => /\S+@\S+\.\S+/.test(email.trim()) && otp.trim().length >= 4,
@@ -116,14 +149,55 @@ export function SignupPage() {
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
               Password
             </label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 6 characters"
-              disabled={loading}
-              className="h-12 border-muted-foreground/20 focus:ring-2 transition-all"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a strong password"
+                disabled={loading}
+                className="h-12 border-muted-foreground/20 pr-20 focus:ring-2 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                disabled={loading}
+                className="absolute inset-y-0 right-3 my-auto h-fit text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+            <div className="space-y-3 rounded-2xl border border-border/50 bg-background/60 p-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Password strength</span>
+                  <span className={password ? "text-foreground" : "text-muted-foreground"}>
+                    {password ? strengthLabels[passwordStrength.score] : "Very Weak"}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      password ? strengthColors[passwordStrength.score] : "bg-muted-foreground/30"
+                    }`}
+                    style={{ width: `${password ? ((passwordStrength.score + 1) / 5) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 text-xs">
+                {passwordChecks.map((rule) => (
+                  <div
+                    key={rule.id}
+                    className={`flex items-center gap-2 ${
+                      rule.passed ? "text-emerald-600" : "text-red-500"
+                    }`}
+                  >
+                    <span className="font-bold">{rule.passed ? "✓" : "✕"}</span>
+                    <span>{rule.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -175,6 +249,7 @@ export function SignupPage() {
               onClick={() => {
                 setPhase("details");
                 setOtp("");
+                setShowPassword(false);
                 setError("");
                 setInfo("");
               }}
