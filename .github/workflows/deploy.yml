@@ -24,7 +24,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./server
-          dockerfile: ./server/Dockerfile
+          file: ./server/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/gemini-server:latest
 
