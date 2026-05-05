@@ -4,6 +4,9 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { backend } from "../../lib/backend";
 
+const strongPasswordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -20,13 +23,14 @@ export function ForgotPasswordPage() {
     phase === "reset" &&
     confirmPassword.trim().length > 0 &&
     password !== confirmPassword;
+  const passwordInvalid = phase === "reset" && password.length > 0 && !strongPasswordRegex.test(password);
 
   const canSend = useMemo(() => /\S+@\S+\.\S+/.test(email.trim()), [email]);
   const canReset = useMemo(
     () =>
       /\S+@\S+\.\S+/.test(email.trim()) &&
       otp.trim().length >= 4 &&
-      password.length >= 6 &&
+      strongPasswordRegex.test(password) &&
       password === confirmPassword,
     [email, otp, password, confirmPassword]
   );
@@ -54,6 +58,13 @@ export function ForgotPasswordPage() {
 
     if (password !== confirmPassword) {
       setError("Both passwords should match");
+      return;
+    }
+
+    if (!strongPasswordRegex.test(password)) {
+      setError(
+        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+      );
       return;
     }
 
@@ -139,6 +150,11 @@ export function ForgotPasswordPage() {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
+              {passwordInvalid && (
+                <p className="text-xs font-medium text-destructive">
+                  Use 8+ characters with uppercase, lowercase, number, and special character
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium leading-none">Confirm New Password</label>

@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes.js");
 const chatroomRoutes = require("./routes/chatroomRoutes.js");
 const messageRoutes = require("./routes/messageRoutes.js");
 const subscriptionRoutes = require("./routes/subscriptionRoutes.js");
+const { startWorker } = require("./worker/geminiWorker.js");
 
 const authMiddleware = require("./middlewares/authMiddleware.js");
 const errorMiddleware = require("./middlewares/errorMiddleware.js");
@@ -20,6 +21,7 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://localhost:4173",
   "http://127.0.0.1:4173",
+  "http://localhost",
 ].filter(Boolean);
 
 async function initializeDatabase() {
@@ -58,6 +60,7 @@ app.use(errorMiddleware);
 
 async function startServer() {
   await initializeDatabase();
+  await startWorker();
 
   return new Promise((resolve) => {
     const server = app.listen(PORT, () => {

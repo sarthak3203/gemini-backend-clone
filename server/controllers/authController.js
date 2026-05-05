@@ -16,6 +16,8 @@ const OTP_EXPIRY_MS = 3 * 60 * 1000;
 const PASSWORD_SALT_ROUNDS = 8;
 const SIGNUP_PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_REQUIREMENTS_MESSAGE =
+  "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
 
 function normalizeEmail(email) {
   return email.toString().trim().toLowerCase();
@@ -23,6 +25,10 @@ function normalizeEmail(email) {
 
 function getOtpExpiryDate() {
   return new Date(Date.now() + OTP_EXPIRY_MS);
+}
+
+function isStrongPassword(password) {
+  return SIGNUP_PASSWORD_REGEX.test(password);
 }
 
 function getEmailDeliveryError(error) {
@@ -98,13 +104,12 @@ async function signup(req, res) {
         .json({ success: false, error: "Name, email, and password are required" });
     }
 
-    if (!SIGNUP_PASSWORD_REGEX.test(password)) {
+    if (!isStrongPassword(password)) {
       return res
         .status(400)
         .json({
           success: false,
-          error:
-            "Password must be at least 8 characters and include uppercase, lowercase, number, and special character",
+          error: PASSWORD_REQUIREMENTS_MESSAGE,
         });
     }
 
@@ -378,10 +383,10 @@ async function resetPassword(req, res) {
       });
     }
 
-    if (password.length < 6) {
+    if (!isStrongPassword(password)) {
       return res.status(400).json({
         success: false,
-        error: "Password must be at least 6 characters long",
+        error: PASSWORD_REQUIREMENTS_MESSAGE,
       });
     }
 
@@ -426,10 +431,10 @@ async function changePassword(req, res) {
         .json({ success: false, error: "New password is required" });
     }
 
-    if (password.length < 6) {
+    if (!isStrongPassword(password)) {
       return res
         .status(400)
-        .json({ success: false, error: "Password must be at least 6 characters long" });
+        .json({ success: false, error: PASSWORD_REQUIREMENTS_MESSAGE });
     }
 
     const password_hash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);

@@ -7,14 +7,23 @@ const messageModel = require("../models/messageModel.js");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+let activeWorker;
+
+function getGeminiModel() {
+  return genAI.getGenerativeModel({ model: geminiModel });
+}
 
 async function callGeminiAPI(userText) {
-  const model = genAI.getGenerativeModel({ model: geminiModel });
+  const model = getGeminiModel();
   const result = await model.generateContent(userText);
   return result.response.text();
 }
 
 function startWorker() {
+  if (activeWorker) {
+    return activeWorker;
+  }
+
   const worker = new Worker(
     MESSAGE_QUEUE_NAME,
     async (job) => {
@@ -51,7 +60,9 @@ function startWorker() {
     console.error(`Job ${job?.id} failed:`, error.message);
   });
 
-  return worker;
+  activeWorker = worker;
+
+  return activeWorker;
 }
 
 module.exports = { startWorker };

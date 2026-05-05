@@ -1,0 +1,6 @@
+node_modules
+
+dist
+# The dist folder is generated fresh inside the container by npm run build
+
+.env

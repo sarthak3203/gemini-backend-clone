@@ -16,6 +16,7 @@ function formatSender(sender) {
 export function ChatPage() {
   const { token } = useAuth();
   const scrollRef = useRef(null);
+  const activeRoomRef = useRef(null);
 
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [roomsError, setRoomsError] = useState("");
@@ -31,6 +32,8 @@ export function ChatPage() {
   const [sendLoading, setSendLoading] = useState(false);
   const [sendInfo, setSendInfo] = useState("");
   const [sendError, setSendError] = useState("");
+  const pollTimeoutRef = useRef(null);
+  const pendingReplyRef = useRef(null);
 
   const canCreateRoom = useMemo(() => newTitle.trim().length >= 2, [newTitle]);
   const canSend = useMemo(() => text.trim().length > 0 && Boolean(activeRoom), [text, activeRoom]);
@@ -41,6 +44,18 @@ export function ChatPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    activeRoomRef.current = activeRoom;
+  }, [activeRoom]);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const loadRooms = useCallback(async () => {
     setRoomsError("");
@@ -71,10 +86,13 @@ export function ChatPage() {
     setThreadLoading(true);
     try {
       const res = await backend.chatroom.getById(token, room.id);
-      setMessages(res?.data?.messages || []);
+      const nextMessages = res?.data?.messages || [];
+      setMessages(nextMessages);
+      return nextMessages;
     } catch (e) {
       setThreadError(e.message || "Failed to load chatroom");
       setMessages([]);
+      return [];
     } finally {
       setThreadLoading(false);
     }
@@ -85,8 +103,53 @@ export function ChatPage() {
   }, [loadRooms]);
 
   async function selectRoom(room) {
+    pendingReplyRef.current = null;
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
     setActiveRoom(room);
     await loadThread(room);
+  }
+
+  function scheduleReplyPolling(roomId, userText, attempt = 0) {
+    const maxAttempts = 15;
+    const delayMs = attempt < 5 ? 1500 : 2500;
+
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+    }
+
+    pollTimeoutRef.current = setTimeout(async () => {
+      if (!activeRoomRef.current || activeRoomRef.current.id !== roomId) {
+        return;
+      }
+
+      try {
+        const nextMessages = await loadThread(activeRoomRef.current);
+        const pendingUserMessage = nextMessages.find(
+          (message) =>
+            message.sender === "USER" &&
+            message.message_text === userText &&
+            message.status === "pending"
+        );
+
+        if (!pendingUserMessage) {
+          pendingReplyRef.current = null;
+          setSendInfo("");
+          return;
+        }
+      } catch {
+        // Keep retrying below unless we have exhausted attempts.
+      }
+
+      if (attempt + 1 >= maxAttempts) {
+        setSendInfo("Gemini is taking longer than usual. You can keep chatting or click Sync.");
+        return;
+      }
+
+      scheduleReplyPolling(roomId, userText, attempt + 1);
+    }, delayMs);
   }
 
   async function sendMessage() {
@@ -107,7 +170,9 @@ export function ChatPage() {
       if (res?.gemini_reply) {
         setMessages((m) => [...m, { sender: "GEMINI", message_text: res.gemini_reply }]);
       } else {
-        setSendInfo("Response is processing in queue. Click refresh to fetch the Gemini reply.");
+        pendingReplyRef.current = { roomId: activeRoom.id, text: nextText };
+        setSendInfo("Gemini is responding. We’ll update this chat automatically.");
+        scheduleReplyPolling(activeRoom.id, nextText);
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) {
@@ -140,6 +205,9 @@ export function ChatPage() {
               New
             </Button>
           </div>
+          {roomsError && (
+            <p className="mt-3 text-xs font-medium text-red-500">{roomsError}</p>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -195,6 +263,11 @@ export function ChatPage() {
                 Sync
               </Button>
             </div>
+            {threadError && (
+              <div className="border-b border-border/40 bg-red-50 px-6 py-2 text-xs font-medium text-red-600">
+                {threadError}
+              </div>
+            )}
 
             {/* Messages Area */}
             <div 

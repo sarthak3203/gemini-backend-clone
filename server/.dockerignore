@@ -1,0 +1,9 @@
+node_modules
+# Never copy local node_modules — Docker installs its own inside the container
+
+.env
+# Never bake secrets into a Docker image — pass them as environment variables at runtime
+
+*.log
+server.err.log
+server.out.log

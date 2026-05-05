@@ -61,8 +61,8 @@ async function getOtpForPurpose(email, purpose) {
 
 async function main() {
   const email = `codex.smoke.${Date.now()}@example.com`;
-  const password = "secret123";
-  const nextPassword = "secret456";
+  const password = "Secret123!";
+  const nextPassword = "NextSecret123!";
   const results = { email };
 
   try {
